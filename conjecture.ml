@@ -66,7 +66,7 @@ let piece_to_matrix piece=
 let make_pieces n = 
   let ap = all_pieces n in
   List.map ap
-  ~f:Tiling.Tile.(fun x -> create ~s:(Srotations) ~m:Mone (Tiling.Pattern.create (piece_to_matrix x)));;
+  ~f:Tiling.Tile.(fun x -> create ~s:(Spositive) ~m:Mone (Tiling.Pattern.create (piece_to_matrix x)));;
 
 
 make_pieces 4;;
@@ -76,7 +76,7 @@ let make_pattern n =
   Tiling.Pattern.create (Array.make_matrix ~dimx:size ~dimy:size true);;
  
 
-let create_problem n = Tiling.create_problem (make_pattern n) (make_pieces n);;
+let create_problem n = Tiling.Problem.create (make_pattern n) (make_pieces n);;
  
 (* Tiling.print_problem Format.std_formatter (create_problem 4);; *)
 
@@ -91,18 +91,19 @@ let get_mat_dims m =
   let c = Array.length (m.(0)) in
   (r,c);;
 
-let print_solution_D n = 
+let print_solution_D n =
+  let open Tiling.Problem.ToEMC in
   let pb = (create_problem n) in
-  let emc = Tiling.ToEMC.make pb in
-  let (r,c) = get_mat_dims emc.Tiling.ToEMC.matrix in
-  Printf.printf "dimensions: %d %d\n%!" r c;
-  let d = (Emc.D.create ~primary:emc.Tiling.ToEMC.primary emc.Tiling.ToEMC.matrix) in
+  let emc = make pb in
+  Printf.printf "dimensions: %d %d\n%!" (Array.length emc.emc) emc.columns;
+  let d =
+    Emc.D.create_sparse ~columns:emc.columns ~primary:emc.primary emc.emc in
   let solution = Emc.D.find_solution d in
   print_newline();
-  Tiling.ToEMC.print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;
-  flush stdout;;
-  (* let c = Emc.D.count_solutions d in *)
-  (* Printf.printf "number of solutions: %d\n%!" c;; *)
+  print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;
+  flush stdout;
+  let c = Emc.D.count_solutions d in
+  Printf.printf "number of solutions: %d\n%!" c;;
 
 (* let sat_solver = (fun ~input ~output -> sprintf "minisat %s %s" input output);; *)
 
