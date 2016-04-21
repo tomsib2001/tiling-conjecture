@@ -70,14 +70,15 @@ let piece_to_matrix piece=
 
 let make_pieces n ~remBars:remBars =
   let ap = ref (all_pieces n) in
-  Printf.printf "numbe of pieces: %d%!\n" (List.length !ap);
+  Printf.printf "number of pieces: %d%!\n" (List.length !ap);
   if remBars then
     begin
+      assert(n>=4);
       Printf.printf "removing two bars from pieces...%!\n";
       let (x,y) = two_bars n in
-      let before = List.length !ap in
+      (* let before = List.length !ap in *)
       ap := List.filter !ap ~f:(fun i -> i <> x && i <> y);
-      assert(List.length !ap = before - 2);
+      (* assert(List.length !ap = before - 2); *)
     end;
   List.map !ap
   ~f:Tiling.Tile.(fun x -> create ~s:(Spositive) ~m:Mone (Tiling.Pattern.create (piece_to_matrix x)));;
@@ -91,7 +92,7 @@ let make_pattern n ~remBars:remBars =
   if remBars then begin
     for i = 0 to n-2 do
       res.(0).(i) <- false;
-      res.(n-1).(i) <- false;
+      res.(size-1).(i) <- false;
     done;
   end;
   Tiling.Pattern.create res
@@ -115,6 +116,7 @@ let get_mat_dims m =
 
 let print_solution_D n ~remBars:remBars =
   let open Tiling.Problem.ToEMC in
+  Printf.printf "creating problem...%!\n";
   let pb = (create_problem ~remBars:remBars n) in
   (* Tiling.Problem.print Format.std_formatter pb; *)
   let emc = make pb in
@@ -122,12 +124,32 @@ let print_solution_D n ~remBars:remBars =
   Printf.printf "dimensions: %d %d\n%!" (Array.length emc.emc) emc.columns;
   let d =
     Emc.D.create_sparse ~columns:emc.columns ~primary:emc.primary emc.emc in
+  Printf.printf "Done creating problem.%!\n";
   let solution = Emc.D.find_solution d in
   print_newline();
   print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;
-  flush stdout;
+  flush stdout;;
+  (* let c = Emc.D.count_solutions d in *)
+  (* Printf.printf "number of solutions: %d\n%!" c; emc;; *)
+
+let count_solution_D n ~remBars:remBars =
+  let open Tiling.Problem.ToEMC in
+  Printf.printf "creating problem...%!\n";
+  let pb = (create_problem ~remBars:remBars n) in
+  (* Tiling.Problem.print Format.std_formatter pb; *)
+  let emc = make pb in
+  (* print_emc Format.std_formatter emc; *)
+  Printf.printf "dimensions: %d %d\n%!" (Array.length emc.emc) emc.columns;
+  let d =
+    Emc.D.create_sparse ~columns:emc.columns ~primary:emc.primary emc.emc in
+  Printf.printf "Done creating problem.%!\n";
+  (* let solution = Emc.D.find_solution d in *)
+  (* print_newline(); *)
+  (* print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000; *)
+  (* flush stdout;; *)
   let c = Emc.D.count_solutions d in
   Printf.printf "number of solutions: %d\n%!" c; emc;;
+
 
 (* let sat_solver = (fun ~input ~output -> sprintf "minisat %s %s" input output);; *)
 
@@ -143,7 +165,7 @@ let print_solution_D n ~remBars:remBars =
 let i = try (int_of_string (Sys.argv.(1))) with
   | _ -> 4;;
 
-print_solution_D i ~remBars:false ;;
+print_solution_D i ~remBars:true ;;
 
 
 (* Emc.D.find_solution (create_emc 4);; *)
