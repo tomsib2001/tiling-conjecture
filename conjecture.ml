@@ -79,6 +79,7 @@ let make_pieces n ~remBars:remBars =
       (* let before = List.length !ap in *)
       ap := List.filter !ap ~f:(fun i -> i <> x && i <> y);
       (* assert(List.length !ap = before - 2); *)
+      Printf.printf "Done removing two bars from pieces.%!\n";
     end;
   List.map !ap
   ~f:Tiling.Tile.(fun x -> create ~s:(Spositive) ~m:Mone (Tiling.Pattern.create (piece_to_matrix x)));;
@@ -90,10 +91,12 @@ let make_pattern n ~remBars:remBars =
   let size = (1 lsl (n-2)) in
   let res = (Array.make_matrix ~dimx:size ~dimy:size true) in
   if remBars then begin
+    Printf.printf "modifying matrix to remove two bars...%!\n";
     for i = 0 to n-2 do
       res.(0).(i) <- false;
       res.(size-1).(i) <- false;
     done;
+    Printf.printf "Done modifying matrix to remove two bars.%!\n";
   end;
   Tiling.Pattern.create res
 ;;
@@ -118,13 +121,18 @@ let print_solution_D n ~remBars:remBars =
   let open Tiling.Problem.ToEMC in
   Printf.printf "creating problem...%!\n";
   let pb = (create_problem ~remBars:remBars n) in
+  Printf.printf "Done creating problem.%!\n";
   (* Tiling.Problem.print Format.std_formatter pb; *)
+  Printf.printf "creating emc...%!\n";
   let emc = make pb in
+    Printf.printf "Done creating emc.%!\n";
   (* print_emc Format.std_formatter emc; *)
   Printf.printf "dimensions: %d %d\n%!" (Array.length emc.emc) emc.columns;
+  Printf.printf "Launching create_sparse...%!\n";  
   let d =
     Emc.D.create_sparse ~columns:emc.columns ~primary:emc.primary emc.emc in
-  Printf.printf "Done creating problem.%!\n";
+  Printf.printf "Done doing create_sparse.%!\n";  
+
   let solution = Emc.D.find_solution d in
   print_newline();
   print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;
