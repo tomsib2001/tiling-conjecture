@@ -5,11 +5,11 @@ let irange a b = List.range (a) (b+1);;
 
 (* remaining = remaining height *)
 let all_next remaining (a,b) : (int*int) list =
-  List.concat 
-    (List.map 
+  List.concat
+    (List.map
        ~f:(fun x ->
 	 (List.map ~f:(fun y -> (x,y)) (irange b remaining))
-       ) 
+       )
        (irange a b));;
 
 (* all_next 2 (0,1);; *)
@@ -25,15 +25,15 @@ all_next 1 (0,0);;
 let all_pieces n =
   let rec aux (a,b) remaining : (int * int) list list =
     let next = all_next remaining (a,b) in
-    let all_suffix = 
+    let all_suffix =
       (* if remaining= 0 then [[]] else *)
-      List.map 
-	~f:(fun (c,d) -> ((c,d),if remaining > d then aux (c,d) (remaining-1) else [[]])) 
+      List.map
+	~f:(fun (c,d) -> ((c,d),if remaining > d then aux (c,d) (remaining-1) else [[]]))
 	next
     in
     let before_concat =
       List.map
-	~f:(fun ((c,d),ll) -> 
+	~f:(fun ((c,d),ll) ->
 	  List.map
 	    ~f:(fun l -> (c,d)::l)
 	    ll
@@ -43,19 +43,24 @@ let all_pieces n =
     List.concat before_concat
   in aux (0,0) (n-2);;
 
-(* let ap4 = all_pieces 4;; *)
+let ap4 = all_pieces 4;;
 (* assert(List.length (all_pieces 4) = 5);; *)
 
-let get_height_width (piece : (int*int) list) = 
+let two_bars n =
+  let horizontal_bar = List.map (List.range 0 (n-1)) ~f:(fun _ -> (0,0)) in
+  let vertical_bar = [(0,n-2)] in
+  (horizontal_bar,vertical_bar);;
+
+let get_height_width (piece : (int*int) list) =
   let width = List.length piece in
   let height = List.fold_left piece ~init:0 ~f:(fun maxi (_,y) -> max (y+1) maxi) in (height,width);;
 
 let piece_to_matrix piece=
   let (height,width) = get_height_width piece in
   let res = Array.make_matrix ~dimx:width ~dimy:height false in
-  List.iteri 
-    piece 
-    ~f:(fun i (a,b) -> 
+  List.iteri
+    piece
+    ~f:(fun i (a,b) ->
       for j = a to b do
 	res.(i).(j) <- true
       done);
@@ -63,21 +68,38 @@ let piece_to_matrix piece=
 
 (* List.map ap4 ~f:piece_to_matrix  *)
 
-let make_pieces n = 
-  let ap = all_pieces n in
-  List.map ap
+let make_pieces n ~remBars:remBars =
+  let ap = ref (all_pieces n) in
+  Printf.printf "numbe of pieces: %d%!\n" (List.length !ap);
+  if remBars then
+    begin
+      Printf.printf "removing two bars from pieces...%!\n";
+      let (x,y) = two_bars n in
+      let before = List.length !ap in
+      ap := List.filter !ap ~f:(fun i -> i <> x && i <> y);
+      assert(List.length !ap = before - 2);
+    end;
+  List.map !ap
   ~f:Tiling.Tile.(fun x -> create ~s:(Spositive) ~m:Mone (Tiling.Pattern.create (piece_to_matrix x)));;
 
 
 make_pieces 4;;
 
-let make_pattern n = 
+let make_pattern n ~remBars:remBars =
   let size = (1 lsl (n-2)) in
-  Tiling.Pattern.create (Array.make_matrix ~dimx:size ~dimy:size true);;
- 
+  let res = (Array.make_matrix ~dimx:size ~dimy:size true) in
+  if remBars then begin
+    for i = 0 to n-2 do
+      res.(0).(i) <- false;
+      res.(n-1).(i) <- false;
+    done;
+  end;
+  Tiling.Pattern.create res
+;;
 
-let create_problem n = Tiling.Problem.create (make_pattern n) (make_pieces n);;
- 
+
+let create_problem n ~remBars:remBars = Tiling.Problem.create (make_pattern n ~remBars:remBars) (make_pieces n ~remBars:remBars);;
+
 (* Tiling.print_problem Format.std_formatter (create_problem 4);; *)
 
 (* let create_emc n = let pb = (create_problem n) in (pb,Tiling.ToEMC.make pb);; *)
@@ -91,10 +113,12 @@ let get_mat_dims m =
   let c = Array.length (m.(0)) in
   (r,c);;
 
-let print_solution_D n =
+let print_solution_D n ~remBars:remBars =
   let open Tiling.Problem.ToEMC in
-  let pb = (create_problem n) in
+  let pb = (create_problem ~remBars:remBars n) in
+  (* Tiling.Problem.print Format.std_formatter pb; *)
   let emc = make pb in
+  (* print_emc Format.std_formatter emc; *)
   Printf.printf "dimensions: %d %d\n%!" (Array.length emc.emc) emc.columns;
   let d =
     Emc.D.create_sparse ~columns:emc.columns ~primary:emc.primary emc.emc in
@@ -103,7 +127,7 @@ let print_solution_D n =
   print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;
   flush stdout;
   let c = Emc.D.count_solutions d in
-  Printf.printf "number of solutions: %d\n%!" c;;
+  Printf.printf "number of solutions: %d\n%!" c; emc;;
 
 (* let sat_solver = (fun ~input ~output -> sprintf "minisat %s %s" input output);; *)
 
@@ -116,8 +140,10 @@ let print_solution_D n =
 (*   print_newline(); *)
 (* Tiling.ToEMC.print_solution_to_svg_file (Printf.sprintf "toto%d.svg" n) pb emc solution ~width:1000 ~height:1000;; *)
 
+let i = try (int_of_string (Sys.argv.(1))) with
+  | _ -> 4;;
 
-print_solution_D (int_of_string (Sys.argv.(1)));;
+print_solution_D i ~remBars:false ;;
 
 
 (* Emc.D.find_solution (create_emc 4);; *)
