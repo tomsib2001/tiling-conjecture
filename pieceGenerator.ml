@@ -1,5 +1,4 @@
 open Core.Std;;
-open Combine;;
 
 let irange a b = List.range (a) (b+1);;
 
