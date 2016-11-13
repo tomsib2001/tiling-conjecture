@@ -1,1 +1,3 @@
 PKG combine core
+B ./_build
+S .

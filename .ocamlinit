@@ -5,3 +5,4 @@
 #require "core_extended"
 #require "core.syntax"
 #require "combine";;
+#load "/home/thomas/projets/alin/conjecture/_build/pieceGenerator.cmo";;

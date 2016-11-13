@@ -1,72 +1,12 @@
 open Core.Std;;
 open Combine;;
-
-let irange a b = List.range (a) (b+1);;
-
-(* remaining = remaining height *)
-let all_next remaining (a,b) : (int*int) list =
-  List.concat
-    (List.map
-       ~f:(fun x ->
-	 (List.map ~f:(fun y -> (x,y)) (irange b remaining))
-       )
-       (irange a b));;
-
-(* all_next 2 (0,1);; *)
-
-assert(all_next 0 (0,0) = [0,0]);;
-assert(all_next 2 (0,1) = [0,1;0,2;1,1;1,2]);;
-
-all_next 1 (0,0);;
-
-(* irange 0 1;; *)
-(* all_next 2 (0,0);;   *)
-
-let all_pieces n =
-  let rec aux (a,b) remaining : (int * int) list list =
-    let next = all_next remaining (a,b) in
-    let all_suffix =
-      (* if remaining= 0 then [[]] else *)
-      List.map
-	~f:(fun (c,d) -> ((c,d),if remaining > d then aux (c,d) (remaining-1) else [[]]))
-	next
-    in
-    let before_concat =
-      List.map
-	~f:(fun ((c,d),ll) ->
-	  List.map
-	    ~f:(fun l -> (c,d)::l)
-	    ll
-	)
-	all_suffix
-    in
-    List.concat before_concat
-  in aux (0,0) (n-2);;
-
-let ap4 = all_pieces 4;;
-(* assert(List.length (all_pieces 4) = 5);; *)
+open PieceGenerator;;
+(* List.map ap4 ~f:piece_to_matrix  *)
 
 let two_bars n =
   let horizontal_bar = List.map (List.range 0 (n-1)) ~f:(fun _ -> (0,0)) in
   let vertical_bar = [(0,n-2)] in
   (horizontal_bar,vertical_bar);;
-
-let get_height_width (piece : (int*int) list) =
-  let width = List.length piece in
-  let height = List.fold_left piece ~init:0 ~f:(fun maxi (_,y) -> max (y+1) maxi) in (height,width);;
-
-let piece_to_matrix piece=
-  let (height,width) = get_height_width piece in
-  let res = Array.make_matrix ~dimx:width ~dimy:height false in
-  List.iteri
-    piece
-    ~f:(fun i (a,b) ->
-      for j = a to b do
-	res.(i).(j) <- true
-      done);
-  res;;
-
-(* List.map ap4 ~f:piece_to_matrix  *)
 
 let make_pieces n ~remBars:remBars =
   let ap = ref (all_pieces n) in
