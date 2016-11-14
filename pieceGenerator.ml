@@ -1,5 +1,9 @@
 open Core.Std;;
 
+(* n will be the size of steps *)
+(* size of the board *)
+let size n = (1 lsl (n-2));;
+
 let irange a b = List.range (a) (b+1);;
 
 (* remaining = remaining height *)
@@ -22,6 +26,7 @@ all_next 1 (0,0);;
 (* all_next 2 (0,0);;   *)
 
 let all_pieces n =
+  Printf.eprintf "generating all pieces...\n%!";
   let rec aux (a,b) remaining : (int * int) list list =
     let next = all_next remaining (a,b) in
     let all_suffix =
@@ -40,7 +45,9 @@ let all_pieces n =
 	all_suffix
     in
     List.concat before_concat
-  in aux (0,0) (n-2);;
+  in let res = aux (0,0) (n-2) in
+  Printf.eprintf "Done generating all pieces.\n%!"; res
+;;
 
 let get_height_width (piece : (int*int) list) =
   let width = List.length piece in
@@ -68,7 +75,7 @@ let piece_to_position_list piece : piece =
     ~init:[] in (res,height,width);;
 
 
-let all4_triples : piece list = List.map ~f:piece_to_position_list (all_pieces 4);;
+(* let all4_triples : piece list = List.map ~f:piece_to_position_list (all_pieces 4);; *)
 
 let get_min_altitude (p : piece) =
   let (p,_,_) = p in
@@ -94,14 +101,14 @@ let rotate_pi4 (piece_pos : piece) : piece = let (p,h,w) = piece_pos in
 ;;
 
 
-(List.nth_exn all4_triples 4);; 
-rotate_pi4 (List.nth_exn all4_triples 4);; 
-rotate_pi4 @@ rotate_pi4 (List.nth_exn all4_triples 4);; 
-rotate_pi4 @@ rotate_pi4 @@ rotate_pi4 (List.nth_exn all4_triples 4);; 
+(* (List.nth_exn all4_triples 4);;  *)
+(* rotate_pi4 (List.nth_exn all4_triples 4);;  *)
+(* rotate_pi4 @@ rotate_pi4 (List.nth_exn all4_triples 4);;  *)
+(* rotate_pi4 @@ rotate_pi4 @@ rotate_pi4 (List.nth_exn all4_triples 4);;  *)
 
-let rec iter n f x = match n with
+let rec iter k f x = match k with
   | 0 -> x
-  | n -> f (iter (n-1) f x);;
+  | k -> f (iter (k-1) f x);;
 
 let all_rotations (piece_pos : piece) =
   List.fold_right
@@ -117,21 +124,30 @@ let all_rotations (piece_pos : piece) =
 let all_prods l1 l2 =
   List.concat (List.map ~f:(fun x -> (List.map ~f:(fun y -> (x,y)) l2 )) l1);;
 
-let all_positions_translation n (p : piece) =
+let all_positions_translation size_board (p : piece) =
   let (_,h,w) = p in
-  all_prods (List.range 0 (n-w+1)) (List.range 0 (n-h+1));;
+  all_prods (List.range 0 (size_board-w+1)) (List.range 0 (size_board-h+1));;
 
-let all_positions (n : int) (piece : piece) = let res = (List.map ~f:(fun p -> (p,all_positions_translation n p)) (all_rotations piece)) in
+let all_positions (size_board : int) (piece : piece) =
+  let res =
+    List.map
+      ~f:(fun p -> (p,all_positions_translation size_board p))
+      (all_rotations piece)
+  in
   res
 ;;
 
-List.map ~f:(fun p -> (p,all_positions 4 p)) all4_triples;;
+(* List.map ~f:(fun p -> (p,all_positions 4 p)) all4_triples;; *)
 
 let generate_all_positions n =
+  Printf.eprintf "generating all positions...\n%!";
+  let size_board = size n in
   let all_triples = List.map ~f:piece_to_position_list (all_pieces n) in
-  List.map ~f:(fun p -> (p,all_positions n p)) all_triples;;
+  let res = List.map ~f:(fun p -> (p,all_positions size_board p)) all_triples in
+  Printf.eprintf "Done generating all positions.\n%!"; res
+;;
 
-generate_all_positions 4;;
+(* generate_all_positions 5;; *)
 
 let sob b = if b then "1" else "0"
 
@@ -150,11 +166,9 @@ let print_bit_matrix (mat : bool array array) =
   done;
   Printf.printf "\n%!";;
 
-let get_matrix (p : piece) n (offx,offy) =
-  (* let m = get_max_altitude p in *)
-  (* let n = get_max_altitude p in *)
+let get_matrix (p : piece) size_board (offx,offy) =
   let (p,_,_) = p in
-  let res = Array.make_matrix ~dimx:n ~dimy:n false in
+  let res = Array.make_matrix ~dimx:size_board ~dimy:size_board false in
   List.iter ~f:(fun (i,j) -> res.(offx+i).(offy+j) <- true) p;
   res;;
 
@@ -168,12 +182,25 @@ let get_matrix (p : piece) n (offx,offy) =
 (*                    List.iter ~f:(fun (posx,posy) -> Printf.printf "considering positions (%d,%d)" posx posy;print_bit_matrix @@ get_matrix (List.map ~f:(fun (u,v) -> (u+posy,v+posx)) p1,h,w) n) l1) l) (generate_all_positions 4);; *)
 
 
+module Key = struct
+  module T = struct
+    type t = ((int * int) list)*((int * int) list)*int*int with sexp
+    let equal (a,b,c,d) (x,y,z,t) = a=x && b=y && c=z && d=t
+    let compare = Pervasives.compare
+    let hash = Hashtbl.hash
+  end
+  include T
+  include Hashable.Make (T)
+end
+
+let h = Key.Table.create () ~size:1000
+
+
 let get_variable (p : piece) (p1 : piece) ((x,y) : int * int) =
   let (p1,_,_) = p1 in
   let (p,_,_) = p in
-  List.fold_right ~f:(fun (u,v) b -> Printf.sprintf"%d%d%s" u v b) (p@p1) ~init:(Printf.sprintf"%d%d" x y);;
-
-
+  if Hashtbl.mem h (p,p1,x,y) then Hashtbl.find_exn h (p,p1,x,y) else
+  let res = List.fold_right ~f:(fun (u,v) b -> Printf.sprintf"%d%d%s" u v b) (p@p1) ~init:(Printf.sprintf"%d%d" x y) in Hashtbl.replace h ~key:(p,p1,x,y) ~data:res; res;;
 
 (* get_variable (List.nth_exn all4_triples 4) (0,0);; *)
 
