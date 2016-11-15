@@ -11,7 +11,7 @@ let all_next remaining (a,b) : (int*int) list =
   List.concat
     (List.map
        ~f:(fun x ->
-	 (List.map ~f:(fun y -> (x,y)) (irange b remaining))
+         (List.map ~f:(fun y -> (x,y)) (irange b remaining))
        )
        (irange a b));;
 
@@ -32,17 +32,17 @@ let all_pieces n =
     let all_suffix =
       (* if remaining= 0 then [[]] else *)
       List.map
-	~f:(fun (c,d) -> ((c,d),if remaining > d then aux (c,d) (remaining-1) else [[]]))
-	next
+        ~f:(fun (c,d) -> ((c,d),if remaining > d then aux (c,d) (remaining-1) else [[]]))
+        next
     in
     let before_concat =
       List.map
-	~f:(fun ((c,d),ll) ->
-	  List.map
-	    ~f:(fun l -> (c,d)::l)
-	    ll
-	)
-	all_suffix
+        ~f:(fun ((c,d),ll) ->
+          List.map
+            ~f:(fun l -> (c,d)::l)
+            ll
+        )
+        all_suffix
     in
     List.concat before_concat
   in let res = aux (0,0) (n-2) in
@@ -60,7 +60,7 @@ let piece_to_matrix piece=
     piece
     ~f:(fun i (a,b) ->
       for j = a to b do
-	res.(i).(j) <- true
+        res.(i).(j) <- true
       done);
   res;;
 
@@ -81,15 +81,15 @@ let get_min_altitude (p : piece) =
   let (p,_,_) = p in
     List.fold_right p ~f:(fun (a,_) m -> min a m) ~init:1000;;
 
-let get_max_altitude (p : piece) = 
+let get_max_altitude (p : piece) =
   let (p,_,_) = p in
   List.fold_right p ~f:(fun (a,_) m -> max a m) ~init:(-1);;
-  
-let get_min_xoffset (p : piece) = 
+
+let get_min_xoffset (p : piece) =
   let (p,_,_) = p in
     List.fold_right p ~f:(fun (_,b) m -> min b m) ~init:1000;;
 
-let get_max_xoffset (p : piece) = 
+let get_max_xoffset (p : piece) =
   let (p,_,_) = p in
     List.fold_right p ~f:(fun (_,b) m -> max b m) ~init:(-1);;
 
